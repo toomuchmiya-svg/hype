@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PEAK HYPE — The Trendsetter Board Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brandA: { DEFAULT: '#0284c7', light: '#38bdf8', dark: '#0369a1', glow: 'rgba(56, 189, 248, 0.35)' },
+            brandB: { DEFAULT: '#ea580c', light: '#fb923c', dark: '#c2410c', glow: 'rgba(251, 146, 60, 0.35)' },
+            board: { bg: '#0f172a', surface: '#1e293b', card: '#334155', border: '#475569' }
+          },
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['Space Grotesk', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #090d16;
+      color: #f8fafc;
+      font-family: 'Outfit', sans-serif;
+      user-select: none;
+    }
+    .grid-pyramid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .pyramid-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .card-shadow {
+      box-shadow: 0 8px 20px -4px rgba(0,0,0,0.5), 0 2px 6px -1px rgba(0,0,0,0.3);
+    }
+    .card-interactive {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .card-interactive:hover:not(.locked) {
+      transform: translateY(-4px) scale(1.03);
+      box-shadow: 0 12px 24px -4px rgba(56, 189, 248, 0.3);
+    }
+    .district-pulse {
+      animation: pulse-glow 1.5s infinite alternate;
+    }
+    @keyframes pulse-glow {
+      0% { filter: drop-shadow(0 0 4px #38bdf8); transform: scale(1); }
+      100% { filter: drop-shadow(0 0 14px #fb923c); transform: scale(1.04); }
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden antialiased selection:bg-cyan-500 selection:text-white">
+
+  <!-- TOP APP BAR / STATUS HEADER -->
+  <header class="w-full bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- LOGO & GAME INFO -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-orange-500 p-0.5 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center font-black text-xl tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-orange-400">
+            PH
+          </div>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-xl tracking-wide uppercase bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-slate-100 to-orange-400">
+            PEAK HYPE
+          </h1>
+          <p class="text-xs text-slate-400 font-mono tracking-wider">MICRO DUEL • <span id="chapter-badge" class="text-cyan-400 font-bold">CHAPTER I: SPARK</span></p>
+        </div>
+      </div>
+
+      <!-- CURRENT TURN BANNER -->
+      <div id="turn-indicator-box" class="px-5 py-2 rounded-full border border-cyan-500/40 bg-cyan-950/40 text-cyan-300 font-bold text-sm flex items-center gap-2 shadow-inner">
+        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+        <span id="turn-text">PLAYER A'S TURN (BLUE)</span>
+      </div>
+
+      <!-- CONTROLS & MODALS -->
+      <div class="flex items-center gap-2">
+        <button id="btn-howtoplay" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Rules
+        </button>
+        <button id="btn-sound" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition">
+          <svg id="icon-sound" class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.707 12 4.414 12 5.414v13.172c0 1-1.077 1.707-1.707 1.077L5.586 15z"/></svg>
+        </button>
+        <button id="btn-restart" class="px-3.5 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 text-xs font-semibold border border-rose-800/60 transition">
+          Reset
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN PLAY AREA: DASHBOARDS + BOARD + DRAFT PYRAMID -->
+  <main class="max-w-7xl mx-auto w-full p-3 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+
+    <!-- LEFT COLUMN: PLAYER STATS & BOARD (5 COLS) -->
+    <div class="lg:col-span-5 flex flex-col gap-5">
+
+      <!-- PLAYER SCORE CARDS -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- PLAYER A -->
+        <div id="panel-player-A" class="bg-slate-900/80 border-2 border-cyan-500/50 rounded-xl p-3.5 flex flex-col justify-between transition-all shadow-lg">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-3.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400"></span>
+              <span class="font-bold text-sm text-cyan-200">PLAYER A</span>
+            </div>
+            <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">BLUE</span>
+          </div>
+
+          <div class="mt-3 flex items-baseline justify-between">
+            <span class="text-xs text-slate-400 uppercase font-mono">Budget</span>
+            <div class="flex items-center gap-1 font-extrabold text-xl text-amber-400">
+              <span id="player-A-budget">3</span>
+              <span class="text-xs text-amber-500">💰</span>
+            </div>
+          </div>
+
+          <!-- SUBCULTURE TAGS -->
+          <div class="mt-3 pt-2 border-t border-slate-800/80">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-mono mb-1.5 flex justify-between">
+              <span>Subcultures</span>
+              <span id="player-A-tag-count" class="text-cyan-400 font-bold">0/4</span>
+            </div>
+            <div id="player-A-tags" class="flex flex-wrap gap-1">
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-500 border border-slate-700">Empty</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLAYER B -->
+        <div id="panel-player-B" class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between transition-all shadow-lg">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-3.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500"></span>
+              <span class="font-bold text-sm text-orange-200">PLAYER B</span>
+            </div>
+            <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-orange-950 text-orange-300 border border-orange-800">ORANGE</span>
+          </div>
+
+          <div class="mt-3 flex items-baseline justify-between">
+            <span class="text-xs text-slate-400 uppercase font-mono">Budget</span>
+            <div class="flex items-center gap-1 font-extrabold text-xl text-amber-400">
+              <span id="player-B-budget">3</span>
+              <span class="text-xs text-amber-500">💰</span>
+            </div>
+          </div>
+
+          <!-- SUBCULTURE TAGS -->
+          <div class="mt-3 pt-2 border-t border-slate-800/80">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-mono mb-1.5 flex justify-between">
+              <span>Subcultures</span>
+              <span id="player-B-tag-count" class="text-orange-400 font-bold">0/4</span>
+            </div>
+            <div id="player-B-tags" class="flex flex-wrap gap-1">
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-500 border border-slate-700">Empty</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- THE HYPE TUG-OF-WAR TRACK -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <span class="text-rose-400">🔥</span> Hype Tug-of-War
+          </span>
+          <span class="text-[11px] font-mono text-slate-400">Goal: Reach -3 (A) or +3 (B)</span>
+        </div>
+
+        <!-- TRACK SVG & SPACES -->
+        <div class="relative py-3">
+          <!-- Background Track Line -->
+          <div class="absolute top-1/2 left-4 right-4 h-2 -translate-y-1/2 bg-slate-800 rounded-full border border-slate-700"></div>
+
+          <!-- 7 TRACK SPACES -->
+          <div class="relative z-10 flex justify-between items-center">
+            <!-- A WIN -->
+            <div class="w-9 h-9 rounded-full bg-cyan-950 border-2 border-cyan-400 text-cyan-300 font-extrabold text-xs flex items-center justify-center shadow-lg shadow-cyan-500/20" title="Player A Peak Hype Win">
+              -3
+            </div>
+            <!-- A2 -->
+            <div class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold flex items-center justify-center">
+              -2
+            </div>
+            <!-- A1 -->
+            <div class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold flex items-center justify-center">
+              -1
+            </div>
+            <!-- CENTER 0 -->
+            <div class="w-8 h-8 rounded-full bg-slate-900 border-2 border-slate-600 text-slate-300 font-extrabold text-xs flex items-center justify-center">
+              0
+            </div>
+            <!-- B1 -->
+            <div class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold flex items-center justify-center">
+              +1
+            </div>
+            <!-- B2 -->
+            <div class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold flex items-center justify-center">
+              +2
+            </div>
+            <!-- B WIN -->
+            <div class="w-9 h-9 rounded-full bg-orange-950 border-2 border-orange-500 text-orange-300 font-extrabold text-xs flex items-center justify-center shadow-lg shadow-orange-500/20" title="Player B Peak Hype Win">
+              +3
+            </div>
+          </div>
+
+          <!-- ANIMATED HYPE MARKER PAWN -->
+          <div id="hype-pawn" class="absolute top-1/2 -translate-y-1/2 left-[50%] -translate-x-1/2 z-20 transition-all duration-500 ease-out pointer-events-none">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 via-purple-400 to-orange-400 border-2 border-white shadow-lg shadow-purple-500/50 flex items-center justify-center transform hover:scale-110">
+              <div class="w-3 h-3 rounded-full bg-slate-950 animate-ping"></div>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-between text-[10px] font-mono text-slate-400 mt-1 px-1">
+          <span class="text-cyan-400 font-semibold">◀ Player A Dominance</span>
+          <span>Niche Spark</span>
+          <span class="text-orange-400 font-semibold">Player B Dominance ▶</span>
+        </div>
+      </div>
+
+      <!-- DISTRICT MAP BOARD -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 relative shadow-xl overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between mb-2 z-10">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <span class="text-cyan-400">🌐</span> Market Districts (4)
+          </span>
+          <span id="target-instruction" class="text-xs font-semibold text-amber-400 animate-pulse hidden">
+            👉 Click a highlighted district!
+          </span>
+        </div>
+
+        <!-- BOARD GRAPHICS & INTERACTIVE DISTRICT NODES -->
+        <div class="relative w-full h-[260px] bg-slate-950/60 rounded-xl border border-slate-800/80 flex items-center justify-center">
+          
+          <!-- SVG CONNECTION LINES -->
+          <svg class="absolute inset-0 w-full h-full pointer-events-none stroke-slate-700/60" stroke-width="2" stroke-dasharray="4 4">
+            <!-- Niche (Top) to Creators (Left) & Suburbs (Right) -->
+            <line x1="50%" y1="22%" x2="22%" y2="50%" />
+            <line x1="50%" y1="22%" x2="78%" y2="50%" />
+            <!-- Creators (Left) to Mass Market (Bottom) & Suburbs (Right) -->
+            <line x1="22%" y1="50%" x2="50%" y2="78%" />
+            <line x1="22%" y1="50%" x2="78%" y2="50%" />
+            <!-- Suburbs (Right) to Mass Market (Bottom) -->
+            <line x1="78%" y1="50%" x2="50%" y2="78%" />
+          </svg>
+
+          <!-- 1. NICHE (TOP) -->
+          <div id="district-niche" data-district="niche" class="district-node absolute top-[8%] left-[50%] -translate-x-1/2 w-32 h-20 bg-slate-900 border-2 border-slate-700 rounded-xl p-2 flex flex-col justify-between cursor-pointer transition hover:border-slate-500 shadow-lg group">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold text-slate-200 group-hover:text-cyan-400 transition">NICHE</span>
+              <span class="text-[9px] font-mono text-slate-400">#1</span>
+            </div>
+            <!-- TOKEN DISPLAY -->
+            <div class="district-tokens flex justify-around items-center">
+              <div class="token-a-slot text-xs"></div>
+              <div class="token-b-slot text-xs"></div>
+            </div>
+          </div>
+
+          <!-- 2. CREATORS (LEFT) -->
+          <div id="district-creators" data-district="creators" class="district-node absolute top-[50%] left-[5%] -translate-y-1/2 w-32 h-20 bg-slate-900 border-2 border-slate-700 rounded-xl p-2 flex flex-col justify-between cursor-pointer transition hover:border-slate-500 shadow-lg group">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold text-slate-200 group-hover:text-cyan-400 transition">CREATORS</span>
+              <span class="text-[9px] font-mono text-slate-400">#2</span>
+            </div>
+            <div class="district-tokens flex justify-around items-center">
+              <div class="token-a-slot text-xs"></div>
+              <div class="token-b-slot text-xs"></div>
+            </div>
+          </div>
+
+          <!-- 3. SUBURBS (RIGHT) -->
+          <div id="district-suburbs" data-district="suburbs" class="district-node absolute top-[50%] right-[5%] -translate-y-1/2 w-32 h-20 bg-slate-900 border-2 border-slate-700 rounded-xl p-2 flex flex-col justify-between cursor-pointer transition hover:border-slate-500 shadow-lg group">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold text-slate-200 group-hover:text-cyan-400 transition">SUBURBS</span>
+              <span class="text-[9px] font-mono text-slate-400">#3</span>
+            </div>
+            <div class="district-tokens flex justify-around items-center">
+              <div class="token-a-slot text-xs"></div>
+              <div class="token-b-slot text-xs"></div>
+            </div>
+          </div>
+
+          <!-- 4. MASS MARKET (BOTTOM) -->
+          <div id="district-mass_market" data-district="mass_market" class="district-node absolute bottom-[8%] left-[50%] -translate-x-1/2 w-32 h-20 bg-slate-900 border-2 border-slate-700 rounded-xl p-2 flex flex-col justify-between cursor-pointer transition hover:border-slate-500 shadow-lg group">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold text-slate-200 group-hover:text-cyan-400 transition">MASS MARKET</span>
+              <span class="text-[9px] font-mono text-slate-400">#4</span>
+            </div>
+            <div class="district-tokens flex justify-around items-center">
+              <div class="token-a-slot text-xs"></div>
+              <div class="token-b-slot text-xs"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+          <span>🛡️ 2 Tokens = Locked (Immune)</span>
+          <span>Instant Win: Hold 4 Districts</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: CARD PYRAMID DRAFTING AREA (7 COLS) -->
+    <div class="lg:col-span-7 flex flex-col gap-4">
+      
+      <!-- PYRAMID CONTAINER -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 md:p-6 shadow-2xl flex flex-col items-center justify-center min-h-[460px] relative">
+        
+        <div class="w-full flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-300">
+              🎴 Card Pyramid Feed
+            </span>
+            <span id="pyramid-count" class="text-xs font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+              15/15 remaining
+            </span>
+          </div>
+          <span class="text-xs text-slate-400">Draft uncovered cards from bottom row up</span>
+        </div>
+
+        <!-- 5-ROW OVERLAPPING PYRAMID GRID -->
+        <div id="pyramid-grid" class="grid-pyramid w-full py-2">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- TARGETING CANCEL BUTTON (WHEN IN SELECTING MODE) -->
+        <button id="btn-cancel-target" class="hidden mt-4 px-4 py-2 rounded-xl bg-rose-950 text-rose-300 border border-rose-800 text-xs font-bold hover:bg-rose-900 transition">
+          Cancel Targeting & Action
+        </button>
+      </div>
+
+      <!-- LIVE ACTION LOG -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col h-32">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          Game Action Log
+        </span>
+        <div id="action-log" class="flex-grow overflow-y-auto font-mono text-xs text-slate-300 space-y-1 pr-1">
+          <p class="text-slate-500 italic">Game started. Player A goes first!</p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- CARD ACTION MODAL -->
+  <div id="modal-card-action" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl flex flex-col gap-4 transform transition-all scale-95 opacity-0" id="modal-card-content">
+      
+      <div class="flex justify-between items-start border-b border-slate-800 pb-3">
+        <div>
+          <span id="modal-card-type" class="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">
+            ECONOMY
+          </span>
+          <h3 id="modal-card-title" class="font-extrabold text-lg text-slate-100 mt-1">
+            Card Title
+          </h3>
+        </div>
+        <div class="flex items-center gap-1 font-mono font-extrabold text-amber-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-sm">
+          <span>Cost:</span>
+          <span id="modal-card-cost">0</span>
+          <span>💰</span>
+        </div>
+      </div>
+
+      <!-- CARD EFFECT DESCRIPTION -->
+      <div class="bg-slate-950/80 rounded-xl p-3.5 border border-slate-800 text-sm text-slate-300">
+        <p id="modal-card-effect">Effect description goes here...</p>
+        <div id="modal-card-tag-badge" class="mt-2 hidden">
+          <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+            TAG: TECH
+          </span>
+        </div>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="flex flex-col gap-2 mt-2">
+        <button id="btn-play-card" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-extrabold text-sm shadow-lg shadow-cyan-950 transition flex items-center justify-center gap-2">
+          <span>Play Card</span>
+          <span id="btn-play-cost-label" class="text-xs opacity-80">(0 💰)</span>
+        </button>
+        <button id="btn-discard-card" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm border border-slate-700 transition flex items-center justify-center gap-2">
+          <span>Discard for +2 Budget</span>
+          <span class="text-amber-400">💰💰</span>
+        </button>
+        <button id="btn-close-modal" class="w-full py-2 rounded-xl text-slate-400 hover:text-slate-200 font-semibold text-xs transition">
+          Cancel
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY RULES MODAL -->
+  <div id="modal-rules" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-extrabold text-xl text-slate-100 flex items-center gap-2">
+          <span>📘</span> How to Play PEAK HYPE
+        </h3>
+        <button id="btn-close-rules" class="text-slate-400 hover:text-white p-1">✕</button>
+      </div>
+
+      <div class="space-y-4 text-xs text-slate-300 leading-relaxed">
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+          <h4 class="font-bold text-cyan-400 uppercase tracking-wider mb-1">Overview & Goal</h4>
+          <p>Two rival companies compete to turn a new service/product into a cultural phenomenon across 2 Chapters (30 total cards).</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 text-sm mb-1">Turn Actions</h4>
+          <p>Draft any <strong>uncovered card</strong> from the pyramid and choose to either:</p>
+          <ul class="list-disc pl-4 mt-1 space-y-1 text-slate-400">
+            <li><strong class="text-slate-200">Play Card:</strong> Pay its Budget cost (coins) to trigger its market expansion, virality, or tag effect.</li>
+            <li><strong class="text-slate-200">Discard Card:</strong> Discard it to immediately gain <strong class="text-amber-400">+2 Budget</strong>.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 text-sm mb-1">Market Districts & Locking</h4>
+          <p>Placing a token adds brand presence. Placing a 2nd token in the same district <strong class="text-cyan-400">LOCKS</strong> it (creates a 2-token shield immune to removal). Placing 1 token in a district with 1 rival token removes their token instead.</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 text-sm mb-1">Subculture Tag Pair Bonus</h4>
+          <p>Collecting a 2nd copy of the <em>same</em> Subculture tag (TECH, CULTURE, ECO, LIFESTYLE) grants an immediate <strong class="text-amber-400">+2 Budget</strong> bonus!</p>
+        </div>
+
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 border-l-4 border-l-amber-500">
+          <h4 class="font-bold text-amber-400 uppercase tracking-wider mb-1">3 Instant Win Conditions</h4>
+          <ol class="list-decimal pl-4 space-y-1">
+            <li><strong>Total Hype:</strong> Pull the Hype Marker onto your end space (-3 for A, +3 for B).</li>
+            <li><strong>Cultural Monopoly:</strong> Collect all <strong>4 unique Subculture Tags</strong>.</li>
+            <li><strong>Market Control:</strong> Control at least 1 token in <strong>all 4 Districts simultaneously</strong> (or majority control at end of Chapter II).</li>
+          </ol>
+        </div>
+      </div>
+
+      <button id="btn-understood-rules" class="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm transition mt-2">
+        Got it, let's play!
+      </button>
+    </div>
+  </div>
+
+  <!-- VICTORY OVERLAY MODAL -->
+  <div id="modal-victory" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border-2 border-cyan-500/80 rounded-3xl max-w-md w-full p-8 shadow-2xl flex flex-col items-center text-center gap-4 transform animate-bounce-short">
+      
+      <div id="winner-badge-icon" class="w-20 h-20 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-4xl shadow-xl shadow-cyan-500/30">
+        🏆
+      </div>
+
+      <div>
+        <h2 id="victory-title" class="text-3xl font-black tracking-tight text-white uppercase">
+          PLAYER A WINS!
+        </h2>
+        <p id="victory-subtitle" class="text-sm font-semibold text-cyan-400 mt-1">
+          VICTORY BY TOTAL HYPE
+        </p>
+      </div>
+
+      <p id="victory-desc" class="text-xs text-slate-300 bg-slate-950 p-4 rounded-xl border border-slate-800">
+        Player A successfully swung the cultural narrative and dominated the regional trend map!
+      </p>
+
+      <button id="btn-play-again" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-orange-500 hover:from-cyan-400 hover:to-orange-400 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg transition">
+        Play Again
+      </button>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       COMPLETE 30-CARD DATA DEFINITIONS
+       ========================================================================== */
+    const CHAPTER_I_CARDS = [
+      { id: 'c1_1', name: 'Angel Seed', category: 'yellow', cost: 0, effect: 'Gain +2 Budget.', actionType: 'budget', amount: 2 },
+      { id: 'c1_2', name: 'Word of Mouth', category: 'yellow', cost: 0, effect: 'Gain +2 Budget.', actionType: 'budget', amount: 2 },
+      { id: 'c1_3', name: 'Garage Prototype', category: 'yellow', cost: 0, effect: 'Gain +2 Budget.', actionType: 'budget', amount: 2 },
+      { id: 'c1_4', name: 'Early Pre-Orders', category: 'yellow', cost: 0, effect: 'Gain +1 Budget. Pull Hype +1 if you have 0 Budget before playing.', actionType: 'pre_orders' },
+      { id: 'c1_5', name: 'Campus Pop-Up', category: 'red', cost: 1, effect: 'Place 1 Token in Niche.', actionType: 'place_district', district: 'niche', count: 1 },
+      { id: 'c1_6', name: 'Indie Seeding', category: 'red', cost: 1, effect: 'Place 1 Token in Creators.', actionType: 'place_district', district: 'creators', count: 1 },
+      { id: 'c1_7', name: 'Suburban Pilot', category: 'red', cost: 1, effect: 'Place 1 Token in Suburbs.', actionType: 'place_district', district: 'suburbs', count: 1 },
+      { id: 'c1_8', name: 'Grassroots Push', category: 'red', cost: 2, effect: 'Place 1 Token in Niche, then choose Creators or Suburbs for 2nd token.', actionType: 'grassroots_push' },
+      { id: 'c1_9', name: 'Teaser Trailer', category: 'purple', cost: 1, effect: 'Pull Hype +1.', actionType: 'hype', amount: 1 },
+      { id: 'c1_10', name: 'Forum Leak', category: 'purple', cost: 1, effect: 'Pull Hype +1.', actionType: 'hype', amount: 1 },
+      { id: 'c1_11', name: 'Micro-Influencers', category: 'purple', cost: 2, effect: 'Pull Hype +1 and gain +1 Budget.', actionType: 'hype_and_budget', hypeAmount: 1, budgetAmount: 1 },
+      { id: 'c1_12', name: 'Viral Thread', category: 'purple', cost: 2, effect: 'Pull Hype +2.', actionType: 'hype', amount: 2 },
+      { id: 'c1_13', name: 'Open-Source Drop', category: 'green', cost: 1, tag: 'TECH', effect: 'Peek at 1 face-down card in the pyramid.', actionType: 'peek_card' },
+      { id: 'c1_14', name: 'Underground Zine', category: 'green', cost: 1, tag: 'CULTURE', effect: 'Gain +1 Budget.', actionType: 'tag_and_budget', amount: 1 },
+      { id: 'c1_15', name: 'Zero-Waste Pack', category: 'green', cost: 1, tag: 'ECO', effect: 'Place 1 Token in Niche if unlocked.', actionType: 'place_district', district: 'niche', count: 1 }
+    ];
+
+    const CHAPTER_II_CARDS = [
+      { id: 'c2_1', name: 'Series A Round', category: 'yellow', cost: 0, effect: 'Gain +3 Budget.', actionType: 'budget', amount: 3 },
+      { id: 'c2_2', name: 'Ad Revenue Boom', category: 'yellow', cost: 0, effect: 'Gain +3 Budget.', actionType: 'budget', amount: 3 },
+      { id: 'c2_3', name: 'Merch Drop', category: 'yellow', cost: 0, effect: 'Gain +2 Budget + 1 Budget per Locked District you own.', actionType: 'merch_drop' },
+      { id: 'c2_4', name: 'Subscription Lock', category: 'yellow', cost: 0, effect: 'Gain +3 Budget.', actionType: 'budget', amount: 3 },
+      { id: 'c2_5', name: 'Creator Takeover', category: 'red', cost: 2, effect: 'Place 2 Tokens in Creators (can replace 1 unlocked rival token).', actionType: 'place_district', district: 'creators', count: 2, canReplace: true },
+      { id: 'c2_6', name: 'Suburban Rollout', category: 'red', cost: 2, effect: 'Place 2 Tokens in Suburbs (can replace 1 unlocked rival token).', actionType: 'place_district', district: 'suburbs', count: 2, canReplace: true },
+      { id: 'c2_7', name: 'Superstore Blitz', category: 'red', cost: 3, effect: 'Place 2 Tokens in Mass Market (can replace 1 unlocked rival token).', actionType: 'place_district', district: 'mass_market', count: 2, canReplace: true },
+      { id: 'c2_8', name: 'Aggressive Poach', category: 'red', cost: 2, effect: 'Target a district with an unlocked rival token to replace it.', actionType: 'target_poach' },
+      { id: 'c2_9', name: 'Prime-Time Spot', category: 'purple', cost: 2, effect: 'Pull Hype +2.', actionType: 'hype', amount: 2 },
+      { id: 'c2_10', name: 'Celebrity Co-Sign', category: 'purple', cost: 3, effect: 'Pull Hype +2 and place 1 Token in Mass Market.', actionType: 'cosign' },
+      { id: 'c2_11', name: 'Algorithmic Surge', category: 'purple', cost: 2, effect: 'Pull Hype +1 (pulls +2 if you control Niche).', actionType: 'algo_surge' },
+      { id: 'c2_12', name: 'Cultural Phenomenon', category: 'purple', cost: 3, effect: 'Pull Hype +3.', actionType: 'hype', amount: 3 },
+      { id: 'c2_13', name: 'Morning Routine', category: 'green', cost: 2, tag: 'LIFESTYLE', effect: 'Pull Hype +1.', actionType: 'hype', amount: 1 },
+      { id: 'c2_14', name: 'Next-Gen AI Suite', category: 'green', cost: 2, tag: 'TECH', effect: 'Target any district to place 1 Token.', actionType: 'target_any_district' },
+      { id: 'c2_15', name: 'Streetwear Collab', category: 'green', cost: 2, tag: 'CULTURE', effect: 'Gain +2 Budget.', actionType: 'tag_and_budget', amount: 2 }
+    ];
+
+    /* ==========================================================================
+       GAME STATE MANAGEMENT
+       ========================================================================== */
+    let gameState = {
+      chapter: 1,
+      turn: 'A', // 'A' or 'B'
+      hype: 0, // -3 (A win) to +3 (B win)
+      soundEnabled: true,
+      players: {
+        A: { budget: 3, tags: [], tokens: { niche: 0, creators: 0, suburbs: 0, mass_market: 0 } },
+        B: { budget: 3, tags: [], tokens: { niche: 0, creators: 0, suburbs: 0, mass_market: 0 } }
+      },
+      pyramid: [],
+      selectedCardIndex: null,
+      targeting: null, // null or { card, step, validDistricts: [] }
+      winner: null
+    };
+
+    // PYRAMID STRUCTURE DEFINITIONS (15 cards, indices 0..14)
+    // Row 0: [0]
+    // Row 1: [1, 2]
+    // Row 2: [3, 4, 5]
+    // Row 3: [6, 7, 8, 9]
+    // Row 4: [10, 11, 12, 13, 14]
+    const COVERED_BY = [
+      [1, 2],       // 0 covered by 1, 2
+      [3, 4],       // 1 covered by 3, 4
+      [4, 5],       // 2 covered by 4, 5
+      [6, 7],       // 3 covered by 6, 7
+      [7, 8],       // 4 covered by 7, 8
+      [8, 9],       // 5 covered by 8, 9
+      [10, 11],     // 6 covered by 10, 11
+      [11, 12],     // 7 covered by 11, 12
+      [12, 13],     // 8 covered by 12, 13
+      [13, 14],     // 9 covered by 13, 14
+      [], [], [], [], [] // 10..14 uncovered
+    ];
+
+    const INITIAL_FACE_UP = [
+      true,         // Row 0
+      false, false, // Row 1
+      true, true, true, // Row 2
+      false, false, false, false, // Row 3
+      true, true, true, true, true // Row 4
+    ];
+
+    /* ==========================================================================
+       AUDIO SYNTHESIZER (WEB AUDIO API)
+       ========================================================================== */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+      if (!gameState.soundEnabled) return;
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+        if (type === 'click') {
+          osc.frequency.setValueAtTime(400, now);
+          osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now); osc.stop(now + 0.08);
+        } else if (type === 'draft') {
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'hype') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(250, now);
+          osc.frequency.linearRampToValueAtTime(550, now + 0.25);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now); osc.stop(now + 0.25);
+        } else if (type === 'win') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.linearRampToValueAtTime(880, now + 0.4);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+          osc.start(now); osc.stop(now + 0.4);
+        }
+      } catch (e) { }
+    }
+
+    /* ==========================================================================
+       INITIALIZATION & RESTART
+       ========================================================================== */
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function initGame() {
+      gameState = {
+        chapter: 1,
+        turn: 'A',
+        hype: 0,
+        soundEnabled: gameState ? gameState.soundEnabled : true,
+        players: {
+          A: { budget: 3, tags: [], tokens: { niche: 0, creators: 0, suburbs: 0, mass_market: 0 } },
+          B: { budget: 3, tags: [], tokens: { niche: 0, creators: 0, suburbs: 0, mass_market: 0 } }
+        },
+        pyramid: createPyramidDeck(CHAPTER_I_CARDS),
+        selectedCardIndex: null,
+        targeting: null,
+        winner: null
+      };
+
+      document.getElementById('action-log').innerHTML = `<p class="text-slate-500 italic">Game started. Player A goes first!</p>`;
+      document.getElementById('modal-victory').classList.add('hidden');
+      updateUI();
+    }
+
+    function createPyramidDeck(cardSet) {
+      const shuffled = shuffleArray(cardSet);
+      return shuffled.map((card, idx) => ({
+        index: idx,
+        card: card,
+        status: COVERED_BY[idx].length === 0 ? 'uncovered' : 'covered',
+        faceUp: INITIAL_FACE_UP[idx]
+      }));
+    }
+
+    function loadChapter2() {
+      gameState.chapter = 2;
+      gameState.pyramid = createPyramidDeck(CHAPTER_II_CARDS);
+      logAction(`📢 <strong>CHAPTER II UNLOCKED!</strong> Scaling up the hype explosion...`);
+      document.getElementById('chapter-badge').textContent = 'CHAPTER II: EXPLOSION';
+      document.getElementById('chapter-badge').className = 'text-orange-400 font-bold';
+      updateUI();
+    }
+
+    /* ==========================================================================
+       UI RENDER ENGINE
+       ========================================================================== */
+    function updateUI() {
+      renderHeaderAndScores();
+      renderHypeTrack();
+      renderDistricts();
+      renderPyramid();
+      checkPyramidUncover();
+    }
+
+    function renderHeaderAndScores() {
+      // Turn banner
+      const turnBox = document.getElementById('turn-indicator-box');
+      const turnText = document.getElementById('turn-text');
+      const panelA = document.getElementById('panel-player-A');
+      const panelB = document.getElementById('panel-player-B');
+
+      if (gameState.turn === 'A') {
+        turnBox.className = "px-5 py-2 rounded-full border border-cyan-500/50 bg-cyan-950/60 text-cyan-300 font-bold text-sm flex items-center gap-2 shadow-inner shadow-cyan-500/20";
+        turnText.textContent = "PLAYER A'S TURN (BLUE)";
+        panelA.className = "bg-slate-900/90 border-2 border-cyan-400 rounded-xl p-3.5 flex flex-col justify-between transition-all shadow-xl shadow-cyan-500/10";
+        panelB.className = "bg-slate-900/40 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between transition-all opacity-70";
+      } else {
+        turnBox.className = "px-5 py-2 rounded-full border border-orange-500/50 bg-orange-950/60 text-orange-300 font-bold text-sm flex items-center gap-2 shadow-inner shadow-orange-500/20";
+        turnText.textContent = "PLAYER B'S TURN (ORANGE)";
+        panelB.className = "bg-slate-900/90 border-2 border-orange-500 rounded-xl p-3.5 flex flex-col justify-between transition-all shadow-xl shadow-orange-500/10";
+        panelA.className = "bg-slate-900/40 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between transition-all opacity-70";
+      }
+
+      // Budgets
+      document.getElementById('player-A-budget').textContent = gameState.players.A.budget;
+      document.getElementById('player-B-budget').textContent = gameState.players.B.budget;
+
+      // Tags
+      renderTags('A');
+      renderTags('B');
+    }
+
+    function renderTags(player) {
+      const container = document.getElementById(`player-${player}-tags`);
+      const countLabel = document.getElementById(`player-${player}-tag-count`);
+      const tags = gameState.players[player].tags;
+      const uniqueCount = new Set(tags).size;
+      countLabel.textContent = `${uniqueCount}/4`;
+
+      if (tags.length === 0) {
+        container.innerHTML = `<span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-500 border border-slate-700">None</span>`;
+        return;
+      }
+
+      const colorMap = {
+        'TECH': 'bg-cyan-950 text-cyan-300 border-cyan-800',
+        'CULTURE': 'bg-purple-950 text-purple-300 border-purple-800',
+        'ECO': 'bg-emerald-950 text-emerald-300 border-emerald-800',
+        'LIFESTYLE': 'bg-amber-950 text-amber-300 border-amber-800'
+      };
+
+      container.innerHTML = tags.map(tag => `
+        <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${colorMap[tag] || 'bg-slate-800 text-slate-200'}">
+          ${tag}
+        </span>
+      `).join('');
+    }
+
+    function renderHypeTrack() {
+      // Hype ranges from -3 (A win) to +3 (B win)
+      // Map -3..+3 to percentage 0%..100%
+      const pawn = document.getElementById('hype-pawn');
+      const val = gameState.hype; // -3 to +3
+      const percentage = ((val + 3) / 6) * 100;
+      pawn.style.left = `${percentage}%`;
+    }
+
+    function renderDistricts() {
+      const districts = ['niche', 'creators', 'suburbs', 'mass_market'];
+      const instruction = document.getElementById('target-instruction');
+
+      if (gameState.targeting) {
+        instruction.classList.remove('hidden');
+      } else {
+        instruction.classList.add('hidden');
+      }
+
+      districts.forEach(d => {
+        const el = document.getElementById(`district-${d}`);
+        const tokenASlot = el.querySelector('.token-a-slot');
+        const tokenBSlot = el.querySelector('.token-b-slot');
+
+        const countA = gameState.players.A.tokens[d];
+        const countB = gameState.players.B.tokens[d];
+
+        // Token A graphics
+        if (countA === 1) {
+          tokenASlot.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-cyan-600 text-white font-extrabold border border-cyan-300 shadow">A</span>`;
+        } else if (countA >= 2) {
+          tokenASlot.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-cyan-500 text-slate-950 font-black border-2 border-white shadow-lg flex items-center gap-0.5">A 🛡️</span>`;
+        } else {
+          tokenASlot.innerHTML = '';
+        }
+
+        // Token B graphics
+        if (countB === 1) {
+          tokenBSlot.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-orange-600 text-white font-extrabold border border-orange-300 shadow">B</span>`;
+        } else if (countB >= 2) {
+          tokenBSlot.innerHTML = `<span class="px-2 py-0.5 rounded-full bg-orange-500 text-slate-950 font-black border-2 border-white shadow-lg flex items-center gap-0.5">B 🛡️</span>`;
+        } else {
+          tokenBSlot.innerHTML = '';
+        }
+
+        // Targeting highlight glow
+        if (gameState.targeting && gameState.targeting.validDistricts.includes(d)) {
+          el.className = "district-node absolute w-32 h-20 bg-slate-900 border-2 border-amber-400 rounded-xl p-2 flex flex-col justify-between cursor-pointer district-pulse z-30 shadow-2xl";
+        } else {
+          el.className = "district-node absolute w-32 h-20 bg-slate-900 border-2 border-slate-700 rounded-xl p-2 flex flex-col justify-between cursor-pointer transition hover:border-slate-500 shadow-lg group";
+        }
+      });
+    }
+
+    function checkPyramidUncover() {
+      let changed = false;
+      gameState.pyramid.forEach(cardObj => {
+        if (cardObj.status === 'removed') return;
+        const covers = COVERED_BY[cardObj.index];
+        const isCovered = covers.some(covIdx => gameState.pyramid[covIdx].status !== 'removed');
+        
+        if (!isCovered && cardObj.status === 'covered') {
+          cardObj.status = 'uncovered';
+          cardObj.faceUp = true;
+          changed = true;
+        }
+      });
+      return changed;
+    }
+
+    function renderPyramid() {
+      const grid = document.getElementById('pyramid-grid');
+      const countLabel = document.getElementById('pyramid-count');
+      const remCount = gameState.pyramid.filter(c => c.status !== 'removed').length;
+      countLabel.textContent = `${remCount}/15 remaining`;
+
+      // 5 Rows
+      const rows = [
+        [0],
+        [1, 2],
+        [3, 4, 5],
+        [6, 7, 8, 9],
+        [10, 11, 12, 13, 14]
+      ];
+
+      grid.innerHTML = rows.map((rowIndices, rIdx) => `
+        <div class="pyramid-row">
+          ${rowIndices.map(idx => renderCardHTML(gameState.pyramid[idx])).join('')}
+        </div>
+      `).join('');
+
+      // Add Click Listeners to Uncovered Cards
+      document.querySelectorAll('.pyramid-card').forEach(cardEl => {
+        cardEl.addEventListener('click', (e) => {
+          const cardIdx = parseInt(cardEl.dataset.index);
+          handleCardClick(cardIdx);
+        });
+      });
+
+      // Cancel targeting button
+      const cancelBtn = document.getElementById('btn-cancel-target');
+      if (gameState.targeting) {
+        cancelBtn.classList.remove('hidden');
+      } else {
+        cancelBtn.classList.add('hidden');
+      }
+    }
+
+    function renderCardHTML(cardObj) {
+      if (cardObj.status === 'removed') {
+        return `<div class="w-16 h-24 md:w-24 md:h-32 rounded-xl border border-dashed border-slate-800/40 bg-slate-950/20"></div>`;
+      }
+
+      if (!cardObj.faceUp) {
+        return `
+          <div data-index="${cardObj.index}" class="pyramid-card w-16 h-24 md:w-24 md:h-32 rounded-xl bg-gradient-to-br from-slate-800 to-slate-950 border border-slate-700 card-shadow flex flex-col items-center justify-center p-2 opacity-80 cursor-not-allowed">
+            <div class="w-8 h-8 rounded-full border border-slate-600 bg-slate-900 flex items-center justify-center font-extrabold text-xs text-slate-500">
+              ?
+            </div>
+            <span class="text-[9px] font-mono text-slate-500 mt-2">LOCKED</span>
+          </div>
+        `;
+      }
+
+      const card = cardObj.card;
+      const isUncovered = cardObj.status === 'uncovered';
+
+      const catColors = {
+        'yellow': { bg: 'bg-amber-950/80', border: 'border-amber-500/70', badge: 'bg-amber-500 text-slate-950', text: 'text-amber-300' },
+        'red': { bg: 'bg-rose-950/80', border: 'border-rose-500/70', badge: 'bg-rose-500 text-white', text: 'text-rose-300' },
+        'purple': { bg: 'bg-purple-950/80', border: 'border-purple-500/70', badge: 'bg-purple-500 text-white', text: 'text-purple-300' },
+        'green': { bg: 'bg-emerald-950/80', border: 'border-emerald-500/70', badge: 'bg-emerald-500 text-slate-950', text: 'text-emerald-300' }
+      };
+
+      const style = catColors[card.category];
+
+      return `
+        <div data-index="${cardObj.index}" class="pyramid-card card-interactive w-16 h-24 md:w-24 md:h-32 rounded-xl ${style.bg} border-2 ${style.border} card-shadow flex flex-col justify-between p-1.5 md:p-2 cursor-pointer ${isUncovered ? 'ring-2 ring-cyan-400/40 hover:ring-cyan-400' : 'opacity-60 grayscale-[40%]'}">
+          <div class="flex items-center justify-between">
+            <span class="text-[8px] md:text-[10px] font-mono font-black uppercase px-1 py-0.5 rounded ${style.badge}">
+              ${card.category.substring(0, 3)}
+            </span>
+            <span class="text-[9px] md:text-xs font-mono font-bold text-amber-400">
+              ${card.cost}💰
+            </span>
+          </div>
+
+          <div class="my-auto text-center">
+            <h4 class="font-extrabold text-[9px] md:text-xs leading-tight text-slate-100 ${style.text}">
+              ${card.name}
+            </h4>
+            ${card.tag ? `<span class="mt-1 inline-block text-[8px] font-mono font-bold px-1 rounded bg-slate-900 border border-slate-700 text-slate-300">${card.tag}</span>` : ''}
+          </div>
+
+          <div class="text-[7px] md:text-[9px] font-mono text-slate-400 text-center truncate">
+            ${isUncovered ? 'READY' : 'COVERED'}
+          </div>
+        </div>
+      `;
+    }
+
+    /* ==========================================================================
+       CARD SELECTION & ACTION MODAL
+       ========================================================================== */
+    function handleCardClick(index) {
+      const cardObj = gameState.pyramid[index];
+      if (!cardObj || cardObj.status === 'removed') return;
+
+      if (!cardObj.isUncovered && cardObj.status === 'covered') {
+        playSound('click');
+        logAction(`⚠️ Card is covered! Draft uncovered cards below it first.`);
+        return;
+      }
+
+      if (gameState.targeting) {
+        // Special peek card targeting if active
+        if (gameState.targeting.type === 'peek') {
+          if (!cardObj.faceUp) {
+            cardObj.faceUp = true;
+            logAction(`🔍 Player ${gameState.turn} peeked at face-down card: <strong>${cardObj.card.name}</strong>!`);
+            gameState.targeting = null;
+            playSound('draft');
+            updateUI();
+          }
+          return;
+        }
+        return;
+      }
+
+      gameState.selectedCardIndex = index;
+      openCardModal(cardObj.card);
+    }
+
+    function openCardModal(card) {
+      playSound('click');
+      const currentPlayer = gameState.players[gameState.turn];
+      const canAfford = currentPlayer.budget >= card.cost;
+
+      document.getElementById('modal-card-title').textContent = card.name;
+      document.getElementById('modal-card-type').textContent = card.category.toUpperCase();
+      document.getElementById('modal-card-cost').textContent = card.cost;
+      document.getElementById('modal-card-effect').textContent = card.effect;
+
+      const tagBadge = document.getElementById('modal-card-tag-badge');
+      if (card.tag) {
+        tagBadge.classList.remove('hidden');
+        tagBadge.firstElementChild.textContent = `TAG: ${card.tag}`;
+      } else {
+        tagBadge.classList.add('hidden');
+      }
+
+      const btnPlay = document.getElementById('btn-play-card');
+      const btnCostLabel = document.getElementById('btn-play-cost-label');
+      btnCostLabel.textContent = `(${card.cost} 💰)`;
+
+      if (canAfford) {
+        btnPlay.disabled = false;
+        btnPlay.className = "w-full py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-extrabold text-sm shadow-lg shadow-cyan-950 transition flex items-center justify-center gap-2 cursor-pointer";
+      } else {
+        btnPlay.disabled = true;
+        btnPlay.className = "w-full py-3 rounded-xl bg-slate-800 text-slate-500 font-bold text-sm border border-slate-700 cursor-not-allowed flex items-center justify-center gap-2";
+      }
+
+      const modal = document.getElementById('modal-card-action');
+      const content = document.getElementById('modal-card-content');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+      }, 10);
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('modal-card-action');
+      const content = document.getElementById('modal-card-content');
+      content.classList.remove('scale-100', 'opacity-100');
+      content.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => modal.classList.add('hidden'), 150);
+    }
+
+    /* ==========================================================================
+       CARD PLAY & EFFECT RESOLUTION ENGINE
+       ========================================================================== */
+    function playSelectedCard() {
+      if (gameState.selectedCardIndex === null) return;
+      const cardObj = gameState.pyramid[gameState.selectedCardIndex];
+      const card = cardObj.card;
+      const pKey = gameState.turn;
+      const player = gameState.players[pKey];
+
+      if (player.budget < card.cost) return;
+
+      // Pay cost
+      player.budget -= card.cost;
+      cardObj.status = 'removed';
+      playSound('draft');
+
+      logAction(`Player ${pKey} played <strong>${card.name}</strong> (${card.cost} 💰).`);
+
+      // Tag collection & Pair Bonus
+      if (card.tag) {
+        player.tags.push(card.tag);
+        const tagCounts = player.tags.reduce((acc, t) => { acc[t] = (acc[t] || 0) + 1; return acc; }, {});
+        if (tagCounts[card.tag] === 2) {
+          player.budget += 2;
+          logAction(`🎉 <strong>SUBCULTURE PAIR!</strong> Player ${pKey} matched 2x ${card.tag} for +2 Budget bonus!`);
+        }
+      }
+
+      closeModal();
+      resolveCardEffect(card, cardObj);
+    }
+
+    function discardSelectedCard() {
+      if (gameState.selectedCardIndex === null) return;
+      const cardObj = gameState.pyramid[gameState.selectedCardIndex];
+      const pKey = gameState.turn;
+
+      cardObj.status = 'removed';
+      gameState.players[pKey].budget += 2;
+      playSound('click');
+
+      logAction(`Player ${pKey} discarded <strong>${cardObj.card.name}</strong> for +2 Budget.`);
+      closeModal();
+      endTurn();
+    }
+
+    function resolveCardEffect(card, cardObj) {
+      const pKey = gameState.turn;
+      const player = gameState.players[pKey];
+
+      switch (card.actionType) {
+        case 'budget':
+          player.budget += card.amount;
+          logAction(`Player ${pKey} gained +${card.amount} Budget.`);
+          endTurn();
+          break;
+
+        case 'tag_and_budget':
+          player.budget += card.amount;
+          logAction(`Player ${pKey} gained +${card.amount} Budget.`);
+          endTurn();
+          break;
+
+        case 'hype':
+          pullHype(card.amount);
+          endTurn();
+          break;
+
+        case 'hype_and_budget':
+          player.budget += card.budgetAmount;
+          pullHype(card.hypeAmount);
+          endTurn();
+          break;
+
+        case 'pre_orders':
+          player.budget += 1;
+          if (player.budget === 1) { // Was 0 before playing (paid 0, gained 1)
+            pullHype(1);
+            logAction(`⚡ Early Pre-Orders triggered bonus Hype boost!`);
+          }
+          endTurn();
+          break;
+
+        case 'merch_drop':
+          let lockedCount = 0;
+          Object.keys(player.tokens).forEach(d => {
+            if (player.tokens[d] >= 2) lockedCount++;
+          });
+          const gain = 2 + lockedCount;
+          player.budget += gain;
+          logAction(`Player ${pKey} gained +${gain} Budget from Merch Drop.`);
+          endTurn();
+          break;
+
+        case 'place_district':
+          addTokenToDistrict(pKey, card.district, card.count, card.canReplace);
+          endTurn();
+          break;
+
+        case 'grassroots_push':
+          addTokenToDistrict(pKey, 'niche', 1);
+          startTargeting(card, 'select_district', ['creators', 'suburbs']);
+          break;
+
+        case 'target_poach':
+          const rivalKey = pKey === 'A' ? 'B' : 'A';
+          const validPoach = Object.keys(player.tokens).filter(d => gameState.players[rivalKey].tokens[d] === 1);
+          if (validPoach.length === 0) {
+            logAction(`No unlocked rival tokens to poach! Effect skipped.`);
+            endTurn();
+          } else {
+            startTargeting(card, 'poach', validPoach);
+          }
+          break;
+
+        case 'target_any_district':
+          startTargeting(card, 'any_district', ['niche', 'creators', 'suburbs', 'mass_market']);
+          break;
+
+        case 'algo_surge':
+          const hasNicheControl = player.tokens.niche >= 1 && gameState.players[pKey === 'A' ? 'B' : 'A'].tokens.niche === 0;
+          const boost = hasNicheControl ? 2 : 1;
+          pullHype(boost);
+          logAction(`Algorithmic Surge pulled +${boost} Hype!`);
+          endTurn();
+          break;
+
+        case 'cosign':
+          pullHype(2);
+          addTokenToDistrict(pKey, 'mass_market', 1);
+          endTurn();
+          break;
+
+        case 'peek_card':
+          const faceDownIndices = gameState.pyramid.filter(c => !c.faceUp && c.status !== 'removed').map(c => c.index);
+          if (faceDownIndices.length === 0) {
+            logAction(`No face-down cards to peek at.`);
+            endTurn();
+          } else {
+            gameState.targeting = { type: 'peek', card: card };
+            logAction(`🔍 Click any face-down card in the pyramid to peek at it!`);
+            updateUI();
+          }
+          break;
+
+        default:
+          endTurn();
+          break;
+      }
+    }
+
+    /* ==========================================================================
+       TARGETING MODE RESOLUTION (BOARD INTERACTION)
+       ========================================================================== */
+    function startTargeting(card, step, validDistricts) {
+      gameState.targeting = { card, step, validDistricts };
+      logAction(`👉 <strong>SELECT TARGET:</strong> Click a highlighted district on the board.`);
+      updateUI();
+    }
+
+    function handleDistrictClick(districtKey) {
+      if (!gameState.targeting) return;
+      if (!gameState.targeting.validDistricts.includes(districtKey)) return;
+
+      const pKey = gameState.turn;
+      const targetStep = gameState.targeting.step;
+
+      if (targetStep === 'select_district' || targetStep === 'any_district') {
+        addTokenToDistrict(pKey, districtKey, 1);
+      } else if (targetStep === 'poach') {
+        const rivalKey = pKey === 'A' ? 'B' : 'A';
+        gameState.players[rivalKey].tokens[districtKey] = 0;
+        gameState.players[pKey].tokens[districtKey] = 1;
+        logAction(`⚔️ Player ${pKey} poached rival's token in ${districtKey.toUpperCase()}!`);
+      }
+
+      gameState.targeting = null;
+      endTurn();
+    }
+
+    function cancelTargeting() {
+      gameState.targeting = null;
+      logAction(`Targeting cancelled.`);
+      endTurn();
+    }
+
+    /* ==========================================================================
+       DISTRICT TOKEN & HYPE MECHANICS
+       ========================================================================== */
+    function addTokenToDistrict(player, district, count = 1, canReplace = false) {
+      const pObj = gameState.players[player];
+      const rKey = player === 'A' ? 'B' : 'A';
+      const rObj = gameState.players[rKey];
+
+      for (let i = 0; i < count; i++) {
+        // If rival has 1 unlocked token
+        if (rObj.tokens[district] === 1) {
+          if (canReplace) {
+            rObj.tokens[district] = 0;
+            pObj.tokens[district] = Math.min(2, pObj.tokens[district] + 1);
+            logAction(`Player ${player} replaced rival token in ${district.toUpperCase()}!`);
+          } else {
+            rObj.tokens[district] = 0;
+            logAction(`Player ${player} removed rival token from ${district.toUpperCase()}.`);
+          }
+        } else if (rObj.tokens[district] >= 2) {
+          logAction(`District ${district.toUpperCase()} is LOCKED by rival! Cannot add token.`);
+        } else {
+          pObj.tokens[district] = Math.min(2, pObj.tokens[district] + 1);
+          const isLocked = pObj.tokens[district] === 2;
+          logAction(`Player ${player} placed token in ${district.toUpperCase()}${isLocked ? ' (LOCKED 🛡️)' : ''}.`);
+        }
+      }
+    }
+
+    function pullHype(amount) {
+      playSound('hype');
+      if (gameState.turn === 'A') {
+        gameState.hype = Math.max(-3, gameState.hype - amount);
+      } else {
+        gameState.hype = Math.min(3, gameState.hype + amount);
+      }
+      logAction(`🔥 Hype pulled +${amount} towards Player ${gameState.turn}!`);
+    }
+
+    /* ==========================================================================
+       TURN END & WIN DETECTION ENGINE
+       ========================================================================== */
+    function endTurn() {
+      gameState.selectedCardIndex = null;
+      updateUI();
+
+      // Check instant win conditions
+      if (checkWinConditions()) return;
+
+      // Check pyramid empty condition
+      const remainingCards = gameState.pyramid.filter(c => c.status !== 'removed').length;
+      if (remainingCards === 0) {
+        if (gameState.chapter === 1) {
+          loadChapter2();
+          return;
+        } else {
+          // Chapter 2 ended -> Tiebreaker check
+          resolveEndGameTiebreaker();
+          return;
+        }
+      }
+
+      // Switch turn
+      gameState.turn = gameState.turn === 'A' ? 'B' : 'A';
+      updateUI();
+    }
+
+    function checkWinConditions() {
+      // 1. Total Hype Win (-3 or +3)
+      if (gameState.hype <= -3) {
+        triggerVictory('A', 'Total Hype Peak', 'Player A pulled the Hype Marker all the way to Peak Saturation!');
+        return true;
+      }
+      if (gameState.hype >= 3) {
+        triggerVictory('B', 'Total Hype Peak', 'Player B pulled the Hype Marker all the way to Peak Saturation!');
+        return true;
+      }
+
+      // 2. Cultural Monopoly (All 4 unique Subculture Tags)
+      ['A', 'B'].forEach(p => {
+        const uniqueTags = new Set(gameState.players[p].tags);
+        if (uniqueTags.size >= 4) {
+          triggerVictory(p, 'Cultural Monopoly', `Player ${p} collected all 4 unique Subculture Tags (TECH, CULTURE, ECO, LIFESTYLE)!`);
+          return true;
+        }
+      });
+
+      // 3. Market Control (Token in all 4 districts)
+      ['A', 'B'].forEach(p => {
+        const districts = ['niche', 'creators', 'suburbs', 'mass_market'];
+        const hasAll = districts.every(d => gameState.players[p].tokens[d] >= 1);
+        if (hasAll) {
+          triggerVictory(p, 'Market Control', `Player ${p} achieved presence in all 4 Market Districts simultaneously!`);
+          return true;
+        }
+      });
+
+      return false;
+    }
+
+    function resolveEndGameTiebreaker() {
+      const districts = ['niche', 'creators', 'suburbs', 'mass_market'];
+      let countA = 0, countB = 0;
+
+      districts.forEach(d => {
+        if (gameState.players.A.tokens[d] > gameState.players.B.tokens[d]) countA++;
+        if (gameState.players.B.tokens[d] > gameState.players.A.tokens[d]) countB++;
+      });
+
+      if (countA > countB) {
+        triggerVictory('A', 'Majority Market Control', `Player A controls ${countA} districts vs Player B's ${countB}!`);
+      } else if (countB > countA) {
+        triggerVictory('B', 'Majority Market Control', `Player B controls ${countB} districts vs Player A's ${countA}!`);
+      } else {
+        // Hype tiebreaker
+        if (gameState.hype < 0) {
+          triggerVictory('A', 'Hype Advantage Tiebreaker', `Tied on districts, but Player A held the Hype advantage!`);
+        } else if (gameState.hype > 0) {
+          triggerVictory('B', 'Hype Advantage Tiebreaker', `Tied on districts, but Player B held the Hype advantage!`);
+        } else {
+          // Budget tiebreaker
+          const bA = gameState.players.A.budget;
+          const bB = gameState.players.B.budget;
+          if (bA >= bB) {
+            triggerVictory('A', 'Budget Dominance Tiebreaker', `Tied on districts and Hype, Player A wins on Budget!`);
+          } else {
+            triggerVictory('B', 'Budget Dominance Tiebreaker', `Tied on districts and Hype, Player B wins on Budget!`);
+          }
+        }
+      }
+    }
+
+    function triggerVictory(winner, condition, desc) {
+      gameState.winner = winner;
+      playSound('win');
+
+      const modal = document.getElementById('modal-victory');
+      const title = document.getElementById('victory-title');
+      const subtitle = document.getElementById('victory-subtitle');
+      const descEl = document.getElementById('victory-desc');
+      const icon = document.getElementById('winner-badge-icon');
+
+      title.textContent = `PLAYER ${winner} WINS!`;
+      subtitle.textContent = `VICTORY BY ${condition.toUpperCase()}`;
+      descEl.textContent = desc;
+
+      if (winner === 'A') {
+        icon.className = "w-20 h-20 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-4xl shadow-xl shadow-cyan-500/30 text-cyan-300";
+        title.className = "text-3xl font-black tracking-tight text-cyan-400 uppercase";
+      } else {
+        icon.className = "w-20 h-20 rounded-full bg-orange-500/20 border-2 border-orange-400 flex items-center justify-center text-4xl shadow-xl shadow-orange-500/30 text-orange-300";
+        title.className = "text-3xl font-black tracking-tight text-orange-400 uppercase";
+      }
+
+      modal.classList.remove('hidden');
+      logAction(`🏆 <strong>GAME OVER: PLAYER ${winner} WINS BY ${condition}!</strong>`);
+    }
+
+    function logAction(msg) {
+      const log = document.getElementById('action-log');
+      const p = document.createElement('p');
+      p.className = 'border-l-2 border-cyan-500/60 pl-2 py-0.5 text-slate-200';
+      p.innerHTML = msg;
+      log.appendChild(p);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    /* ==========================================================================
+       EVENT LISTENERS & BINDINGS
+       ========================================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      initGame();
+
+      // District node clicks
+      document.querySelectorAll('.district-node').forEach(node => {
+        node.addEventListener('click', () => {
+          const dKey = node.dataset.district;
+          handleDistrictClick(dKey);
+        });
+      });
+
+      // Modal Play / Discard
+      document.getElementById('btn-play-card').addEventListener('click', playSelectedCard);
+      document.getElementById('btn-discard-card').addEventListener('click', discardSelectedCard);
+      document.getElementById('btn-close-modal').addEventListener('click', closeModal);
+      document.getElementById('btn-cancel-target').addEventListener('click', cancelTargeting);
+
+      // Rules modal
+      document.getElementById('btn-howtoplay').addEventListener('click', () => {
+        document.getElementById('modal-rules').classList.remove('hidden');
+      });
+      document.getElementById('btn-close-rules').addEventListener('click', () => {
+        document.getElementById('modal-rules').classList.add('hidden');
+      });
+      document.getElementById('btn-understood-rules').addEventListener('click', () => {
+        document.getElementById('modal-rules').classList.add('hidden');
+      });
+
+      // Restart
+      document.getElementById('btn-restart').addEventListener('click', () => {
+        if (confirm("Reset the game board?")) initGame();
+      });
+      document.getElementById('btn-play-again').addEventListener('click', initGame);
+
+      // Sound toggle
+      document.getElementById('btn-sound').addEventListener('click', () => {
+        gameState.soundEnabled = !gameState.soundEnabled;
+        const icon = document.getElementById('icon-sound');
+        icon.className = gameState.soundEnabled ? "w-4 h-4 text-emerald-400" : "w-4 h-4 text-slate-500 line-through";
+      });
+    });
+  </script>
+</body>
+</html>
